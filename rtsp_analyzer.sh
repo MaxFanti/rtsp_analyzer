@@ -212,31 +212,42 @@ analyze_stream_meta() {
 # ─── Замер битрейта ───────────────────────────────────────────
 measure_bitrate() {
   print_section "Замер битрейта (${DURATION}с)"
- 
   print_info "Получение данных потока..."
  
-  local start end elapsed_real bytes
-  start=$(date +%s%3N)
+  # Создаем временный файл для логов ffmpeg
+  local tmp_log
+  tmp_log=$(mktemp)
  
-  bytes=$(ffmpeg \
-    -y \
-    -rtsp_transport tcp \
-    -i "$URL" \
-    -t "$DURATION" \
-    -c copy \
-    -f mpegts - 2>/dev/null | wc -c)
+  # Запускаем ffmpeg
+  # Мы сохраняем ошибки (stderr) в файл, а байты (stdout) в wc -c
+  local bytes
+  bytes=$(ffmpeg -y -rtsp_transport tcp -i "$URL" -t "$DURATION" -c copy -f mpegts - 2>"$tmp_log" | wc -c)
  
-  end=$(date +%s%3N)
-  elapsed_real=$(echo "scale=2; ($end - $start) / 1000" | bc)
+  # ИЗВЛЕКАЕМ РЕАЛЬНОЕ ВРЕМЯ ПОТОКА ИЗ ЛОГА
+  # Ищем строку "time=00:00:05.12" и переводим в секунды
+  local raw_time
+  raw_time=$(grep -oP 'time=\K[0-9:.]+' "$tmp_log" | tail -n 1)
  
-  if [[ "$bytes" -eq 0 ]]; then
-    print_err "Получено 0 байт — поток не передаёт данные"
-    log "ERROR" "0 bytes received"
+  # Если время не удалось извлечь (например, поток не пошел)
+  if [[ -z "$raw_time" ]]; then
+    print_err "Не удалось получить временные метки потока"
+    rm -f "$tmp_log"
     return 1
   fi
  
-  local kbps mbps kbytes mbytes
-  kbps=$(( bytes * 8 / DURATION / 1024 ))
+  # Конвертируем HH:MM:SS.ms в чистые секунды через awk
+  local stream_duration
+  stream_duration=$(echo "$raw_time" | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }')
+ 
+  # Удаляем временный файл
+  rm -f "$tmp_log"
+ 
+  # Если время слишком маленькое, ставим 1, чтобы не делить на ноль
+  if (( $(echo "$stream_duration < 0.1" | bc -l) )); then stream_duration=1; fi
+ 
+  # ТЕПЕРЬ РАСЧЕТ АБСОЛЮТНО ТОЧЕН
+  local kbps
+  kbps=$(echo "scale=0; ($bytes * 8) / ($stream_duration * 1024)" | bc)
   mbps=$(echo "scale=2; $bytes * 8 / $DURATION / 1024 / 1024" | bc)
   kbytes=$(( bytes / 1024 ))
   mbytes=$(echo "scale=2; $bytes / 1024 / 1024" | bc)
