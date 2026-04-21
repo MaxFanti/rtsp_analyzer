@@ -33,7 +33,7 @@ log() {
 print_header() {
   echo -e "${BOLD}${BLUE}"
   echo "╔══════════════════════════════════════════════════════════╗"
-  echo "║              RTSP Stream Analyzer v1.0                  ║"
+  echo "║              RTSP Stream Analyzer v1.1                  ║"
   echo "╚══════════════════════════════════════════════════════════╝"
   echo -e "${RESET}"
 }
@@ -248,12 +248,12 @@ measure_bitrate() {
   # ТЕПЕРЬ РАСЧЕТ АБСОЛЮТНО ТОЧЕН
   local kbps
   kbps=$(echo "scale=0; ($bytes * 8) / ($stream_duration * 1024)" | bc)
-  mbps=$(echo "scale=2; $bytes * 8 / $DURATION / 1024 / 1024" | bc)
+  mbps=$(echo "scale=2; $bytes * 8 / $stream_duration / 1024 / 1024" | bc)
   kbytes=$(( bytes / 1024 ))
   mbytes=$(echo "scale=2; $bytes / 1024 / 1024" | bc)
  
   print_ok "Получено данных : ${kbytes} KB (${mbytes} MB)"
-  print_ok "Реальное время  : ${elapsed_real}с"
+  print_ok "Реальное время  : ${stream_duration}с"
   print_ok "Битрейт         : ${BOLD}${kbps} kbps${RESET}"
   print_ok "Битрейт         : ${BOLD}${mbps} Mbps${RESET}"
  
