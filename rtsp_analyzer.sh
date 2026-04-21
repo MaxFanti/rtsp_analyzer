@@ -65,6 +65,7 @@ check_dependencies() {
   if (( missing > 0 )); then
     print_err "Установи недостающие зависимости и перезапусти скрипт"
     log "ERROR" "Отсутствуют зависимости: $missing"
+    read -p "Для выхода нажмите Enter"
     exit 1
   fi
 }
@@ -107,7 +108,7 @@ check_network() {
   else
     print_err "Порт $PORT — закрыт или недоступен"
     log "ERROR" "Port $PORT closed on $HOST"
-    read -p " "
+    read -p "Для выхода нажмите Enter"
     exit 1
   fi
 }
@@ -173,6 +174,7 @@ connect_with_retry() {
  
   print_err "Не удалось подключиться после $RETRY_COUNT попыток"
   log "ERROR" "Failed to connect after $RETRY_COUNT attempts"
+  read -p "Для выхода нажмите Enter"
   exit 1
 }
  
@@ -289,4 +291,4 @@ main() {
 }
  
 main
-read -p "  "
+read -p "Для выхода нажмите Enter"
